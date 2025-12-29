@@ -19,11 +19,11 @@ We trained 4 variations of two baseline models.
 **Model Size:** 42.63 MB
 
 ### Trained versions
-All versions were trained on the CIFAR10 train dataset for 200 epochs and evaluated on the CIFAR10 test dataset with basic augmentation.
+All versions were trained on the CIFAR10 train dataset with basic augmentation for 200 epochs and evaluated on the CIFAR10 test dataset.
 
-- *baseline.ipynb*: Trained on 4000 samples for each class.
-- *baseline-500.ipynb*: Trained on 500 samples for each class.
-- *baseline-100.ipynb*: Trained on 100 samples for each class.
+- *baseline.ipynb*: Trained on 4000 samples of each class.
+- *baseline-500.ipynb*: Trained on 500 samples of each class.
+- *baseline-100.ipynb*: Trained on 100 samples of each class.
 
 #### Results
 |Statistic| baseline | baseline-500 | baseline-100 |
@@ -41,12 +41,12 @@ This model is identical to the original ResNet18 but with 5 dimentional output.
 | Layer Name | Output Size | Original Configuration | Adapted Configuration |
 | :--- | :--- | :--- | :--- |
 | **Conv1** | $112 \times 112$ | $7 \times 7$ Convolution, 64 filters, stride 2 | Same
-| **Pooling** | $56 \times 56$ | Same
+| **Pooling** | $56 \times 56$ | $3 \times 3$ Max Pooling, stride 2 | Same |
 | **Conv2_x** | $56 \times 56$ | `[3x3, 64; 3x3, 64] x 2`| Same |
 | **Conv3_x** | $28 \times 28$ |`[3x3, 128; 3x3, 128] x 2` | Same | 
 | **Conv4_x** | $14 \times 14$ |`[3x3, 256; 3x3, 256] x 2` | Same |
 | **Conv5_x** | $7 \times 7$ |`[3x3, 512; 3x3, 512] x 2` | Same |
-| **Output** | $1 \times 1$ | Average Pool $\rightarrow$ 1000-d FC $\rightarrow$ Softmax | Average Pool $\rightarrow$ 5-d FC; Softmax removed
+| **Output** | $1 \times 1$ | Average Pool $\rightarrow$ 1000-d FC $\rightarrow$ Softmax | Average Pool $\rightarrow$ 5-d FC; Softmax removed |
 
 
 ### Trained version
