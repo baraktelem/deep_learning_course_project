@@ -1,0 +1,57 @@
+name: deep_learning_project
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+
+dependencies:
+  # Python version
+  - python=3.10
+  
+  # PyTorch ecosystem (adjust cuda version as needed)
+  - pytorch>=2.0
+  - torchvision
+  - torchaudio
+  # - pytorch-cuda=11.8  # or 12.1 depending on your GPU
+  - pytorch-cuda
+  
+  # Scientific computing
+  - numpy
+  - scipy
+  - pandas
+  
+  # Visualization
+  - matplotlib
+  
+  # Jupyter
+  - jupyter
+  - jupyterlab
+  - ipywidgets
+  
+  # Utilities
+  - tqdm
+  - pillow
+  - scikit-learn
+  
+  # Pip packages (packages not available in conda)
+  - pip
+  - pip:
+    - kymatio    # Scattering transform
+    - kornia     # Image augmentation & normalization
+
+# ============================================================
+# How to use this file:
+# ============================================================
+# Create environment:
+#   conda env create -f environment.yaml
+#
+# Activate environment:
+#   conda activate deep_learning_project
+#
+# Update environment (after adding new packages):
+#   conda env update -f environment.yaml --prune
+#
+# Export current environment (to update this file):
+#   conda env export --no-builds > environment.yaml
+# ============================================================
