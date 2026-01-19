@@ -17,8 +17,14 @@ if IS_KAGGLE:
     repo_path = Path('/kaggle/input/deep-learning-course-project')
     if repo_path.exists():
         sys.path.insert(0, str(repo_path))
+else:
+    # Local: add project root to path (assumes notebook is in notebooks/)
+    project_root = Path.cwd().parent
+    if (project_root / 'src').exists():
+        sys.path.insert(0, str(project_root))
 
 from src.utils.config import *
+from src.utils.datasets import get_cifar10_splits, get_cifar10_loaders  # Add this line
 set_seed(42)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

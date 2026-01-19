@@ -4,6 +4,7 @@ from typing import Any, Callable, Dict, Optional, Tuple
 import time
 import numpy as np
 from pathlib import Path
+import pickle
 
 # PyTorch
 import torch
@@ -72,9 +73,11 @@ def train_model(
     # checkpoint_path.mkdir(parents=True, exist_ok=True) # Create dir if missing
     if DEBUG:
         checkpoint_file = CHECKPOINTS_PATH / f"{experiment_name}_{model_name}_DEBUG.pth"
+        stats_file = STATS_PATH / f"{experiment_name}_{model_name}_DEBUG.pkl"
         n_epochs = 1 # DEBUG mode only runs for 1 epoch
     else:
         checkpoint_file = CHECKPOINTS_PATH / f"{experiment_name}_{model_name}.pth"
+        stats_file = STATS_PATH / f"{experiment_name}_{model_name}.pkl"
 
     if aug_list is None:
         aug_list = get_augmentations(device)
@@ -149,7 +152,18 @@ def train_model(
 
     stats['total_training_time'] = time.time() - start_time
     print(f"=== Finished {model_name}. Total Time: {stats['total_training_time']:.1f}s ===")
-    
+    with open(stats_file, 'wb') as file:
+        pickle.dump(stats, file)
+    return stats
+
+def load_model(model: nn.Module, model_name: str, device: torch.device) -> nn.Module:
+    checkpoint = torch.load(CHECKPOINTS_PATH / f"{model_name}.pth", map_location=device)
+    model.load_state_dict(checkpoint['net'])
+    return model
+
+def load_stats(experiment_name: str, model_name: str) -> Dict[str, Any]:
+    with open(STATS_PATH / f"{experiment_name}_{model_name}.pkl", 'rb') as file:
+        stats = pickle.load(file)
     return stats
 
 def get_normalizer(device: torch.device) -> Callable:
@@ -235,4 +249,22 @@ def get_all_predictions(
             
     # Concatenate into single long tensors
     return torch.cat(all_preds), torch.cat(all_labels)
+
+def get_optimizer_and_scheduler(
+    model: nn.Module,
+    optimizer_type: str="sgd",
+    lr: float=0.1,
+    momentum: float=0.9,
+    weight_decay: float=5e-4,
+    scheduler_type: str="cosine",
+    T_max: int=200
+) -> Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LRScheduler]:
+    if optimizer_type == "sgd":
+        optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
+    else:
+        raise ValueError(f"Invalid optimizer type: {optimizer_type}")
+    if scheduler_type == "cosine":
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=T_max)
+    return optimizer, scheduler
+
     
