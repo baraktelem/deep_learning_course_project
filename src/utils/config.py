@@ -75,8 +75,8 @@ if IS_KAGGLE:
     OUTPUT_PATH = Path('/kaggle/working')
     REPO_PATH = INPUT_PATH / 'deep-learning-course-project'  # UPDATE: your dataset slug
     
-    # Dataset paths
-    DATA_PATH = INPUT_PATH
+    # Dataset paths - use working directory (writable) for downloads
+    DATA_PATH = OUTPUT_PATH / 'data'
     
     # Notebooks path (on Kaggle, notebooks run from working directory)
     NOTEBOOKS_PATH = OUTPUT_PATH
@@ -180,7 +180,7 @@ def get_stats_path(filename):
 def ensure_dirs():
     """Create all necessary directories if they don't exist."""
     # Artifact directories (outputs)
-    artifact_dirs = [CHECKPOINTS_PATH, FIGURES_PATH, OUTPUTS_PATH, STATS_PATH]
+    artifact_dirs = [CHECKPOINTS_PATH, FIGURES_PATH, OUTPUTS_PATH, STATS_PATH, DATA_PATH]
     
     # SRC directories (code structure) - only create locally, not on Kaggle
     if not IS_KAGGLE:
@@ -193,6 +193,6 @@ def ensure_dirs():
 # ============================================================
 # Auto-create directories on import (optional, comment out if not desired)
 # ============================================================
-# ensure_dirs()
+ensure_dirs()
 
 
