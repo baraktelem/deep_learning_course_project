@@ -1,2 +1,22 @@
+# Data
 data/cifar-10-python.tar.gz
-data/cifar-10-python.tar.gz
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
