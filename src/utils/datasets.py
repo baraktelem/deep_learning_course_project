@@ -111,7 +111,7 @@ def get_cifar10_splits(
 
 def get_cifar10_loaders(
     keep_classes: Optional[List[int]] = None,
-    batch_size: int = 64,
+    batch_size: int = 128,
     train_val_split: float = 0.8,
     seed: int = 42,
     **kwargs

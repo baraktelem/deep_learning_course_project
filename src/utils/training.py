@@ -79,6 +79,9 @@ def train_model(
         checkpoint_file = CHECKPOINTS_PATH / f"{experiment_name}_{model_name}.pth"
         stats_file = STATS_PATH / f"{experiment_name}_{model_name}.pkl"
 
+    print(f"Model weights will be saved to: {checkpoint_file}")
+    print(f"Stats will be saved to: {stats_file}")
+
     if aug_list is None:
         aug_list = get_augmentations(device)
 
@@ -137,6 +140,7 @@ def train_model(
 
         if DEBUG:
             print('==> Saving model ... DEBUG')
+            print(f" *to file: {checkpoint_file}")
             state = {
                 'net': model.state_dict(),
                 'epoch': epoch,
@@ -152,6 +156,7 @@ def train_model(
 
     stats['total_training_time'] = time.time() - start_time
     print(f"=== Finished {model_name}. Total Time: {stats['total_training_time']:.1f}s ===")
+    print(f" *Stats will be saved to: {stats_file}")
     with open(stats_file, 'wb') as file:
         pickle.dump(stats, file)
     return stats
