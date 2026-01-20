@@ -71,6 +71,7 @@ MOMENTUM = 0.9 # Used for SGD optimizer
 WEIGHT_DECAY = 0.0001 # Used for SGD optimizer
 T_MAX = 200 # Used for cosine annealing scheduler
 CRITERION = nn.CrossEntropyLoss()
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 # ============================================================
