@@ -70,3 +70,17 @@ def visualize_model_diff(
         
     plt.tight_layout()
     plt.show()
+
+def get_milestone_points(stats_dict):
+    """
+    Extracts sorted (epoch, accuracy) pairs from the stats dictionary.
+    """
+    milestones = stats_dict.get('milestones', {})
+    
+    # Sort by accuracy (the key) so the line is drawn correctly
+    sorted_accuracies = sorted(milestones.keys())
+    
+    # Get the corresponding epoch for each milestone
+    epochs = [milestones[acc]['epoch'] for acc in sorted_accuracies]
+    
+    return epochs, sorted_accuracies
