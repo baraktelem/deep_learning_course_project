@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 # Standard Libraries
 import time
@@ -30,12 +30,11 @@ def train_model(
     valloader : DataLoader, 
     optimizer : torch.optim.Optimizer, 
     scheduler : torch.optim, 
-    criterion, 
-    n_epochs : int, 
-    device, 
-    # checkpoint_dir, 
     experiment_name : str,
-    model_name : str ="Model", 
+    model_name : str, 
+    criterion = CRITERION, 
+    n_epochs : int = N_EPOCHS, 
+    device : torch.device = DEVICE,  
     do_augmentations : bool = True,
     aug_list : Optional[Callable] = None,
     val_accuracy_storing_threshold : float = 50,
@@ -157,6 +156,152 @@ def train_model(
     print(f"=== Finished {model_name}. Total Time: {stats['total_training_time']:.1f}s ===")
     with open(stats_file, 'wb') as file:
         pickle.dump(stats, file)
+    return stats
+
+def train_model_with_milestones(
+    model : nn.Module, 
+    trainloader : DataLoader, 
+    valloader : DataLoader, 
+    optimizer : torch.optim.Optimizer, 
+    scheduler : torch.optim, 
+    experiment_name : str,
+    model_name : str, 
+    criterion : nn.Module = CRITERION, 
+    n_epochs : int = N_EPOCHS, 
+    device : torch.device = DEVICE, 
+    do_augmentations : bool = True,
+    aug_list : Optional[Callable] = None,
+    val_accuracy_storing_threshold : float = 50,
+    print_progress_every : int = 1,
+    early_stop_target : float = 90.0,
+    target_milestones : List[int] = None,
+    DEBUG : bool = False
+) -> Dict[str, Any]:
+    """
+    Fine-tunes a model, tracks milestones, and STOPS if target accuracy is reached.
+    
+    Returns:
+        Dict[str, Any]: A dictionary containing the training statistics.
+            - total_training_time: The total time taken to train the model.
+            - loss: A list of the loss values for each epoch.
+            - time_per_epoch: A list of the time taken to train the model for each epoch.
+            - total_time_per_epoch: A list of the total time taken to train the model for each epoch.
+            - val_accuracy: A list of the validation accuracy for each epoch.
+            - max_val_accuracy: The maximum validation accuracy achieved.
+            - milestones: Dict mapping milestone accuracy to epoch/time when reached.
+    """
+    
+    if target_milestones is None:
+        target_milestones = [50, 55, 60, 65, 70, 75, 80, 85, 90]
+    
+    # Initialize Stats
+    stats = {
+        'total_training_time': 0,
+        'loss': [],
+        'time_per_epoch': [],
+        'total_time_per_epoch': [],
+        'val_accuracy': [],
+        'max_val_accuracy': 0,
+        'milestones': {},
+        'allocated_memory': [],
+        'reserved_memory': []
+    }
+
+    # Set up file paths
+    if DEBUG:
+        checkpoint_file = CHECKPOINTS_PATH / f"{experiment_name}_{model_name}_DEBUG.pth"
+        stats_file = STATS_PATH / f"{experiment_name}_{model_name}_DEBUG.pkl"
+        n_epochs = 1
+    else:
+        checkpoint_file = CHECKPOINTS_PATH / f"{experiment_name}_{model_name}.pth"
+        stats_file = STATS_PATH / f"{experiment_name}_{model_name}.pkl"
+
+    print(f"Model weights will be saved to: {checkpoint_file}")
+    print(f"Stats will be saved to: {stats_file}")
+
+    if aug_list is None:
+        aug_list = get_augmentations(device)
+
+    print(f"\n=== Starting Training with Milestones: {model_name} ===")
+    print(f"    Targeting Milestones: {target_milestones}")
+    print(f"    Early Stopping Target: {early_stop_target}%")
+
+    start_time = time.time()
+    for epoch in range(n_epochs):
+        model.train()
+        iteration_losses = []
+        epoch_start_time = time.time()
+        
+        for inputs, targets in trainloader:
+            inputs, targets = inputs.to(device), targets.to(device)
+            
+            if do_augmentations:
+                inputs = aug_list(inputs)
+
+            outputs = model(inputs)
+            optimizer.zero_grad()
+            loss = criterion(outputs, targets)
+            loss.backward()
+            optimizer.step()
+            iteration_losses.append(loss.item())
+
+        scheduler.step()
+        epoch_end_time = time.time()
+        
+        # Validation
+        val_accuracy = calculate_accuracy(model, valloader, device)
+        current_time = time.time() - start_time
+
+        # Track stats
+        stats['loss'].append(np.mean(iteration_losses))
+        stats['val_accuracy'].append(val_accuracy)
+        stats['allocated_memory'].append(torch.cuda.memory_allocated())
+        stats['reserved_memory'].append(torch.cuda.memory_reserved())
+        stats['time_per_epoch'].append(epoch_end_time - epoch_start_time)
+        stats['total_time_per_epoch'].append(current_time)
+
+        # --- MILESTONE CHECKER ---
+        for m in target_milestones:
+            if val_accuracy >= m and m not in stats['milestones']:
+                stats['milestones'][m] = {
+                    'epoch': epoch + 1,
+                    'time': current_time
+                }
+                print(f"    --> HIT {m}% Accuracy at Epoch {epoch+1} ({current_time:.1f}s)")
+
+        # Save Best Model
+        if val_accuracy > stats['max_val_accuracy']:
+            stats['max_val_accuracy'] = val_accuracy
+            if val_accuracy > val_accuracy_storing_threshold:
+                state = {'net': model.state_dict(), 'epoch': epoch, 'acc': val_accuracy}
+                torch.save(state, checkpoint_file)
+                if (epoch % print_progress_every) == 0:
+                    print(f"    --> New Best Saved: {val_accuracy:.2f}%")
+
+        if DEBUG:
+            print('==> Saving model ... DEBUG')
+            state = {'net': model.state_dict(), 'epoch': epoch, 'acc': val_accuracy}
+            torch.save(state, checkpoint_file)
+        
+        # Print Progress
+        if (epoch % print_progress_every) == 0:
+            print(f"Epoch {epoch+1}/{n_epochs} | Loss: {stats['loss'][-1]:.3f} | Val Acc: {val_accuracy:.2f}%")
+
+        # --- EARLY STOPPING CHECK ---
+        if val_accuracy >= early_stop_target:
+            print(f"\n=== GOAL REACHED! Stopping early at {val_accuracy:.2f}% ===")
+            break
+
+        if DEBUG:
+            break
+
+    stats['total_training_time'] = time.time() - start_time
+    print(f"=== Finished {model_name}. Total Time: {stats['total_training_time']:.1f}s ===")
+    
+    # Save stats
+    with open(stats_file, 'wb') as file:
+        pickle.dump(stats, file)
+    
     return stats
 
 def load_weights(model: nn.Module, experiment_name: str, model_name: str, device: torch.device):
