@@ -6,8 +6,10 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, random_split, Subset
+from sklearn.model_selection import train_test_split
+from collections import Counter 
 
-from src.utils.config import DATA_PATH
+from src.utils.config import *
 
 # Default transform: just convert to tensor
 DEFAULT_TRANSFORM = transforms.ToTensor()
@@ -70,8 +72,10 @@ class FilteredCIFAR10(CIFAR10):
 
 def get_cifar10_splits(
     keep_classes: Optional[List[int]] = None,
-    train_val_split: float = 0.8,
-    seed: int = 42,
+    # train_val_split: float = 0.8,
+    n_samples_per_class_train: int = None,
+    n_samples_per_class_val: int = None,
+    seed: int = SEED,
     **kwargs
 ) -> Tuple[Subset, Subset, Union[CIFAR10, FilteredCIFAR10]]:
     """Get train, validation, and test splits for CIFAR10.
@@ -95,25 +99,71 @@ def get_cifar10_splits(
     train_val = DatasetClass(keep_classes=keep_classes, train=True, **kwargs) if keep_classes else DatasetClass(train=True, **kwargs)
     
     # Split into train and val
-    train_size = int(train_val_split * len(train_val))
-    val_size = len(train_val) - train_size
-    train, val = random_split(
-        train_val,
-        [train_size, val_size],
-        generator=torch.Generator().manual_seed(seed)
-    )
+    # Set default split of 80/20% if not specified
+    if n_samples_per_class_train is None:
+        train_size = int(0.8 * len(train_val))
+        val_size = len(train_val) - train_size
+        train, val = random_split(
+            train_val,
+            [train_size, val_size],
+            generator=torch.Generator().manual_seed(seed)
+        )
+        if n_samples_per_class_val is not None:
+            print(
+                f"WARNING: Samples per class wasn't set for train, but was set for val with {n_samples_per_class_val} samples per class."
+            )
+        print(f"Using default 80/20% split.")
+
+    else: # Samples per class were set for train and val
+        if n_samples_per_class_val is None:
+            n_samples_per_class_val = 500
+            print(f"Using default {n_samples_per_class_val} samples per class for val.")
+        targets = np.array(train_val.targets)
+        indices = np.arange(len(targets))
+        # Use keep_classes count if filtering, otherwise use dataset classes
+        n_classes = len(keep_classes) if keep_classes else len(train_val.classes)
+        train_size = n_samples_per_class_train * n_classes
+        val_size = n_samples_per_class_val * n_classes
+
+        train_indices, remaining_indices = train_test_split(
+            indices,
+            train_size=train_size,
+            stratify=targets,
+            random_state=SEED
+        )
+
+        validation_indices, _ = train_test_split(
+            remaining_indices,
+            train_size=val_size,
+            stratify=targets[remaining_indices],
+            random_state=SEED
+        )
+        train = Subset(train_val, train_indices)
+        val = Subset(train_val, validation_indices)
     
     # Load test data
     test = DatasetClass(keep_classes=keep_classes, train=False, **kwargs) if keep_classes else DatasetClass(train=False, **kwargs)
-    
+    # Print sizes and samples per class
+    print(f"Original train-val size: {len(train_val)}")
+    print(f"Train size: {len(train)}")
+    print(f"Val size: {len(val)}")
+    print(f"Test size: {len(test)}")
+    if n_samples_per_class_train is not None:
+        train_labels = [targets[i] for i in train_indices]
+        val_labels = [targets[i] for i in validation_indices]
+        print("Samples per class (train):", Counter(train_labels))
+        print("Samples per class (val):", Counter(val_labels))
+
     return train, val, test
 
 
-def get_cifar10_loaders(
+def get_cifar10_loaders_and_splits(
     keep_classes: Optional[List[int]] = None,
-    batch_size: int = 128,
-    train_val_split: float = 0.8,
-    seed: int = 42,
+    batch_size: int = BATCH_SIZE,
+    # train_val_split: float = 0.8,
+    n_samples_per_class_train: int = None,
+    n_samples_per_class_val: int = None,
+    seed: int = SEED,
     **kwargs
 ) -> Tuple[DataLoader, DataLoader, DataLoader]:
     """Get train, validation, and test DataLoaders for CIFAR10.
@@ -133,7 +183,9 @@ def get_cifar10_loaders(
     """
     train, val, test = get_cifar10_splits(
         keep_classes=keep_classes,
-        train_val_split=train_val_split,
+        # train_val_split=train_val_split,
+        n_samples_per_class_train=n_samples_per_class_train,
+        n_samples_per_class_val=n_samples_per_class_val,
         seed=seed,
         **kwargs
     )
@@ -142,4 +194,4 @@ def get_cifar10_loaders(
     val_loader = DataLoader(val, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test, batch_size=batch_size, shuffle=False)
     
-    return train_loader, val_loader, test_loader
+    return train_loader, val_loader, test_loader, train, val, test

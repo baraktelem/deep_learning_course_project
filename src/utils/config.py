@@ -25,7 +25,6 @@ else:
 
 from src.utils.config import *
 from src.utils.datasets import get_cifar10_splits, get_cifar10_loaders  # Add this line
-set_seed(42)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -59,6 +58,20 @@ from torchvision import models
 
 # PIL
 from PIL import Image
+
+
+# ============================================================
+# Constants and hyperparameters
+# ============================================================
+SEED = 42
+BATCH_SIZE = 128
+N_EPOCHS = 100
+LR = 0.001 # Used for SGD optimizer
+MOMENTUM = 0.9 # Used for SGD optimizer
+WEIGHT_DECAY = 0.0001 # Used for SGD optimizer
+T_MAX = 200 # Used for cosine annealing scheduler
+CRITERION = nn.CrossEntropyLoss()
+
 
 # ============================================================
 # Environment Detection
@@ -147,8 +160,9 @@ else:
 # ============================================================
 # Helper Functions
 # ============================================================
-def set_seed(seed=42):
+def set_seed(seed):
     """Set seed for reproducibility across all libraries."""
+    print(f"Setting seed to {seed}")
     os.environ['PYTHONHASHSEED'] = str(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -194,5 +208,6 @@ def ensure_dirs():
 # Auto-create directories on import (optional, comment out if not desired)
 # ============================================================
 ensure_dirs()
+set_seed(SEED)
 
 

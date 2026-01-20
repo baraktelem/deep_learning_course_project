@@ -140,7 +140,6 @@ def train_model(
 
         if DEBUG:
             print('==> Saving model ... DEBUG')
-            print(f" *to file: {checkpoint_file}")
             state = {
                 'net': model.state_dict(),
                 'epoch': epoch,
@@ -152,19 +151,18 @@ def train_model(
             
         # Print progress
         if (epoch % print_progress_every) == 0:
-            print(f"Epoch {epoch+1}/{n_epochs} | Loss: {stats['loss'][-1]:.3f} | Test Acc: {stats['val_accuracy'][-1]:.2f}%")
+            print(f"Epoch {epoch+1}/{n_epochs} | Loss: {stats['loss'][-1]:.3f} | Val Acc: {stats['val_accuracy'][-1]:.2f}%")
 
     stats['total_training_time'] = time.time() - start_time
     print(f"=== Finished {model_name}. Total Time: {stats['total_training_time']:.1f}s ===")
-    print(f" *Stats will be saved to: {stats_file}")
     with open(stats_file, 'wb') as file:
         pickle.dump(stats, file)
     return stats
 
-def load_model(model: nn.Module, model_name: str, device: torch.device) -> nn.Module:
-    checkpoint = torch.load(CHECKPOINTS_PATH / f"{model_name}.pth", map_location=device)
+def load_weights(model: nn.Module, experiment_name: str, model_name: str, device: torch.device):
+    checkpoint = torch.load(CHECKPOINTS_PATH /f"{experiment_name}_{model_name}.pth", map_location=device)
     model.load_state_dict(checkpoint['net'])
-    return model
+    # return model
 
 def load_stats(experiment_name: str, model_name: str) -> Dict[str, Any]:
     with open(STATS_PATH / f"{experiment_name}_{model_name}.pkl", 'rb') as file:
@@ -272,4 +270,9 @@ def get_optimizer_and_scheduler(
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=T_max)
     return optimizer, scheduler
 
+def get_model_summary(model: nn.Module) -> Tuple[int, float]:
+    num_params = sum(p.numel() for p in model.parameters())
+    total_bytes = sum(p.numel() * p.element_size() for p in model.parameters())
+    size_mb = total_bytes / (1024 ** 2)
+    return num_params, size_mb
     
