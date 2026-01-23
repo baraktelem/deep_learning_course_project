@@ -3,11 +3,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from src.models.layers.BasicBlock import BasicBlock
-from src.models.layers.AdditiveHybridGaborLayer import AdditiveHybridGaborLayer
+from src.models.layers.AdditiveHybridGaborLayer import AdditiveHybridGaborLayer             
 
 class AdditiveHybridGaborResNet(nn.Module):
     def __init__(self, blocks, num_blocks, num_classes=10):
-        super(ResNet, self).__init__()
+        super(AdditiveHybridGaborResNet, self).__init__()
         self.in_planes = 64
         self.conv1 = AdditiveHybridGaborLayer(3, 64, conv_kernel_size=3, gabor_kernel_size=7, ratio=1, stride=1)
         self.bn_std = nn.BatchNorm2d(64)
@@ -40,7 +40,7 @@ class AdditiveHybridGaborResNet(nn.Module):
         out = self.linear(out)
         return out
 
-def MakeAdditiveHybridGaborResNet():
+def MakeAdditiveHybridGaborResNet18():
     return AdditiveHybridGaborResNet([
         BasicBlock,
         BasicBlock,
