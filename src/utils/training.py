@@ -409,6 +409,23 @@ def get_optimizer_and_scheduler(
 ) -> Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LRScheduler]:
     if optimizer_type == "sgd":
         optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
+    elif optimizer_type == "sgd-hybrid-gabor":
+        gabor_names = {'theta', 'log_sigma', 'log_lambda'}
+        gabor_params = []
+        standard_params = []
+        for name, param in model.named_parameters():
+            if any(key in name for key in gabor_names):
+                gabor_params.append(param)
+            else:
+                standard_params.append(param)
+
+            
+        optimizer = torch.optim.SGD(
+            [{'params':standard_params, 'lr':lr, "weight_decay":weight_decay},
+             {'params':gabor_params, 'lr':lr*2, 'weight_decay':0}],
+            momentum=momentum)
+    elif optimizer_type == "sgd-additive-hybrid-gabor":
+
     else:
         raise ValueError(f"Invalid optimizer type: {optimizer_type}")
     if scheduler_type == "cosine":
