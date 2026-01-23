@@ -407,7 +407,6 @@ def get_optimizer_and_scheduler(
     scheduler_type: str="cosine",
     T_max: int=T_MAX
 ) -> Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LRScheduler]:
-    print(f"T_MAX: {T_MAX}")
     if optimizer_type == "sgd":
         optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
     else:
