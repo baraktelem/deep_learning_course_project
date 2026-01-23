@@ -22,5 +22,6 @@ venv/
 ENV/
 
 # Old notebooks
-./notebooks/old/
-checkpoints/old/
+notebooks/old/
+artifacts/checkpoints/old/
+artifacts/stats/old/
