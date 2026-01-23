@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import math
 
 class AdditiveHybridGaborLayer(nn.Module):
     def __init__(self, in_channels, out_channels, conv_kernel_size=3, gabor_kernel_size=7, ratio=0.5, pad_mode='constant',stride=1):
