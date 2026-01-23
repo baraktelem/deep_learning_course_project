@@ -7,9 +7,8 @@ from src.models.layers.HybridGaborLayer import HybridGaborLayer
 
 class HybridGaborResNet(nn.Module):
     def __init__(self, blocks, num_blocks, num_classes=10):
-        super(ResNet, self).__init__()
+        super(HybridGaborResNet, self).__init__()
         self.in_planes = 64
-        #self.pre_gabor = nn.Conv2d(3, 13, kernel_size=3, stride=1, padding=1, bias=False)
         self.conv1 = HybridGaborLayer(3, 64, conv_kernel_size=3, gabor_kernel_size=13, ratio=0.5, pad_mode='constant')
         self.bn1 = nn.BatchNorm2d(64)
         
