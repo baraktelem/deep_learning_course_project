@@ -405,7 +405,7 @@ def get_optimizer_and_scheduler(
     momentum: float=0.9,
     weight_decay: float=5e-4,
     scheduler_type: str="cosine",
-    T_max: int=200
+    T_max: int=T_MAX
 ) -> Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LRScheduler]:
     if optimizer_type == "sgd":
         optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
@@ -424,8 +424,6 @@ def get_optimizer_and_scheduler(
             [{'params':standard_params, 'lr':lr, "weight_decay":weight_decay},
              {'params':gabor_params, 'lr':lr*2, 'weight_decay':0}],
             momentum=momentum)
-    elif optimizer_type == "sgd-additive-hybrid-gabor":
-
     else:
         raise ValueError(f"Invalid optimizer type: {optimizer_type}")
     if scheduler_type == "cosine":
