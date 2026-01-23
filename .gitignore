@@ -20,3 +20,7 @@ __pycache__/
 .venv/
 venv/
 ENV/
+
+# Old notebooks
+./notebooks/old/
+checkpoints/old/

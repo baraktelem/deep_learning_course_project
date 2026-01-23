@@ -65,13 +65,25 @@ from PIL import Image
 # ============================================================
 SEED = 42
 BATCH_SIZE = 128
-N_EPOCHS = 100
+N_EPOCHS = 200
 LR = 0.001 # Used for SGD optimizer
 MOMENTUM = 0.9 # Used for SGD optimizer
 WEIGHT_DECAY = 0.0001 # Used for SGD optimizer
-T_MAX = 200 # Used for cosine annealing scheduler
+T_MAX = N_EPOCHS # Used for cosine annealing scheduler
 CRITERION = nn.CrossEntropyLoss()
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+print("====================== Hyperparameters =======================")
+print(f"N_EPOCHS: {N_EPOCHS}")
+print(f"T_MAX: {T_MAX}")
+print(f"CRITERION: {CRITERION}")
+print(f"DEVICE: {DEVICE}")
+print(f"SEED: {SEED}")
+print(f"BATCH_SIZE: {BATCH_SIZE}")
+print(f"LR: {LR}")
+print(f"MOMENTUM: {MOMENTUM}")
+print(f"WEIGHT_DECAY: {WEIGHT_DECAY}")
+print("================================================================")
 
 
 # ============================================================
