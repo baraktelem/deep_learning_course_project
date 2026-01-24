@@ -11,7 +11,7 @@ IS_KAGGLE = os.environ.get('KAGGLE_KERNEL_RUN_TYPE', '') != ''
 
 if IS_KAGGLE:
     # Install packages not available on Kaggle
-    !pip install -q kymatio kornia
+    %pip install -q kymatio kornia
     
     # Add repo to path (UPDATE 'deep-learning-course-project' to your dataset slug)
     repo_path = Path('/kaggle/input/deep-learning-course-project')
@@ -24,7 +24,7 @@ else:
         sys.path.insert(0, str(project_root))
 
 from src.utils.config import *
-from src.utils.datasets import get_cifar10_splits, get_cifar10_loaders  # Add this line
+from src.utils.datasets import get_cifar10_splits, get_cifar10_loaders
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

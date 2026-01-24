@@ -165,7 +165,7 @@ def get_cifar10_loaders_and_splits(
     n_samples_per_class_val: int = None,
     seed: int = SEED,
     **kwargs
-) -> Tuple[DataLoader, DataLoader, DataLoader]:
+) -> Tuple[DataLoader, DataLoader, DataLoader, Subset, Subset, Subset]:
     """Get train, validation, and test DataLoaders for CIFAR10.
     
     Args:
@@ -176,7 +176,7 @@ def get_cifar10_loaders_and_splits(
         **kwargs: Other args passed to dataset (transform, etc.)
     
     Returns:
-        Tuple of (train_loader, val_loader, test_loader)
+        Tuple of (train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset)
     
     Example:
         train_loader, val_loader, test_loader = get_cifar10_loaders(keep_classes=[0, 1, 2], batch_size=32)
