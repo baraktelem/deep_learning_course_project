@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import math
 
 class AdditiveHybridGaborLayer(nn.Module):
-    def __init__(self, in_channels, out_channels, conv_kernel_size=3, gabor_kernel_size=7, ratio=0.5, pad_mode='constant',stride=1):
+    def __init__(self, in_channels, out_channels, conv_kernel_size=3, gabor_kernel_size=7, ratio=0.5, pad_mode='constant',stride=1, norm_and_activation=False):
         super().__init__()
 
         self.n_param = int(out_channels * ratio)
@@ -14,6 +14,7 @@ class AdditiveHybridGaborLayer(nn.Module):
         self.conv_kernel_size = conv_kernel_size
         self.gabor_kernel_size = gabor_kernel_size
         self.in_channels = in_channels * 2
+        self.norm_and_activation = norm_and_activation
 
 
         n_scales = int(math.ceil(math.sqrt(self.n_param)))
@@ -71,6 +72,10 @@ class AdditiveHybridGaborLayer(nn.Module):
             self.std_conv.weight *= 1
             if self.std_conv.bias is not None:
                 self.std_conv.bias.zero_()
+
+        if norm_and_activation:
+            self.bn_std = nn.BatchNorm2d(out_channels)
+            self.bn_param = nn.BatchNorm2d(out_channels)
 
 
     def generate_filters_quadrature(self, max_size):
@@ -177,6 +182,11 @@ class AdditiveHybridGaborLayer(nn.Module):
         out_imag = F.conv2d(x_padded, f_imag, stride=self.stride, padding=0)
         out_param = torch.hypot(out_real, out_imag)
         out_param = F.avg_pool2d(out_param, kernel_size=3, stride=1, padding=1)
+
+        if self.norm_and_activation:
+            out_param = self.bn_param(out_param)
+            out_std = self.bn_std(out_std)
+            return torch.max(out_std, out_param)
         
         return out_std, out_param
     
