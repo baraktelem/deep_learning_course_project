@@ -338,7 +338,8 @@ def calculate_accuracy(
     model: nn.Module, 
     dataloader: DataLoader, 
     device: torch.device, 
-    normalize: Callable=None
+    normalize: Callable=None,
+    augmentations: Callable=None
 ) -> float:
     model.eval()
     total_correct = 0
@@ -351,6 +352,8 @@ def calculate_accuracy(
             images, labels = data
             images = images.to(device)
             labels = labels.to(device)
+            if augmentations is not None:
+                images = augmentations(images)
             images = normalize(images)
             outputs = model(images)
             predictions = torch.argmax(outputs, dim=-1)
