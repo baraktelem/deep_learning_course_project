@@ -76,6 +76,7 @@ class AdditiveHybridGaborLayer(nn.Module):
         if norm_and_activation:
             self.bn_std = nn.BatchNorm2d(out_channels)
             self.bn_param = nn.BatchNorm2d(out_channels)
+            self.bn_final = nn.BatchNorm2d(out_channels)
 
 
     def generate_filters_quadrature(self, max_size):
@@ -186,7 +187,7 @@ class AdditiveHybridGaborLayer(nn.Module):
         if self.norm_and_activation:
             out_param = self.bn_param(out_param)
             out_std = self.bn_std(out_std)
-            return torch.max(out_std, out_param)
+            return self.bn_final(torch.max(out_std, out_param))
         
         return out_std, out_param
     
