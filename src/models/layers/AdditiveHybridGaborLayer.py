@@ -165,10 +165,8 @@ class AdditiveHybridGaborLayer(nn.Module):
         out_x    = F.conv2d(x_padded, f_imag_x, stride=self.stride, padding=0, groups=self.in_channels//2)
         out_y    = F.conv2d(x_padded, f_imag_y, stride=self.stride, padding=0, groups=self.in_channels//2)
 
-        out_imag_mag = torch.hypot(out_x, out_y)
-        
-
-        out_monogenic = torch.hypot(out_real, out_imag_mag)
+        out_imag_mag = torch.sqrt(out_x**2 + out_y**2 + 1e-8)
+        out_monogenic = torch.sqrt(out_real**2 + out_imag_mag**2 + 1e-8)
 
         out_dog_final = F.avg_pool2d(out_monogenic, kernel_size=3, stride=1, padding=1)
 
