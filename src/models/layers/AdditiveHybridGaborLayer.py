@@ -181,13 +181,13 @@ class AdditiveHybridGaborLayer(nn.Module):
         
         out_real = F.conv2d(x_padded, f_real, stride=self.stride, padding=0)
         out_imag = F.conv2d(x_padded, f_imag, stride=self.stride, padding=0)
-        out_param = torch.hypot(out_real, out_imag)
+        out_param = torch.sqrt(out_param**2 + out_std**2 + 1e-12)
         out_param = F.avg_pool2d(out_param, kernel_size=3, stride=1, padding=1)
 
         if self.norm_and_activation:
             out_param = self.bn_param(out_param)
             out_std = self.bn_std(out_std)
-            return self.bn_final(torch.max(out_std, out_param))
+            return torch.max(out_std, out_param)
         
         return out_std, out_param
     
