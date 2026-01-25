@@ -305,12 +305,12 @@ def train_model_with_milestones(
     return stats
 
 def load_weights(model: nn.Module, experiment_name: str, model_name: str, device: torch.device):
-    checkpoint = torch.load(CHECKPOINTS_PATH /f"{experiment_name}_{model_name}.pth", map_location=device)
+    checkpoint = torch.load(INPUT_CHECKPOINTS_PATH /f"{experiment_name}_{model_name}.pth", map_location=device)
     model.load_state_dict(checkpoint['net'])
     # return model
 
 def load_stats(experiment_name: str, model_name: str) -> Dict[str, Any]:
-    with open(STATS_PATH / f"{experiment_name}_{model_name}.pkl", 'rb') as file:
+    with open(INPUT_STATS_PATH / f"{experiment_name}_{model_name}.pkl", 'rb') as file:
         stats = pickle.load(file)
     return stats
 
@@ -338,7 +338,8 @@ def calculate_accuracy(
     model: nn.Module, 
     dataloader: DataLoader, 
     device: torch.device, 
-    normalize: Callable=None
+    normalize: Callable=None,
+    augmentations: Callable=None
 ) -> float:
     model.eval()
     total_correct = 0
@@ -351,6 +352,8 @@ def calculate_accuracy(
             images, labels = data
             images = images.to(device)
             labels = labels.to(device)
+            if augmentations is not None:
+                images = augmentations(images)
             images = normalize(images)
             outputs = model(images)
             predictions = torch.argmax(outputs, dim=-1)

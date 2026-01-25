@@ -11,7 +11,7 @@ IS_KAGGLE = os.environ.get('KAGGLE_KERNEL_RUN_TYPE', '') != ''
 
 if IS_KAGGLE:
     # Install packages not available on Kaggle
-    !pip install -q kymatio kornia
+    %pip install -q kymatio kornia
     
     # Add repo to path (UPDATE 'deep-learning-course-project' to your dataset slug)
     repo_path = Path('/kaggle/input/deep-learning-course-project')
@@ -24,7 +24,7 @@ else:
         sys.path.insert(0, str(project_root))
 
 from src.utils.config import *
-from src.utils.datasets import get_cifar10_splits, get_cifar10_loaders  # Add this line
+from src.utils.datasets import get_cifar10_loaders_and_splits
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -100,6 +100,11 @@ if IS_KAGGLE:
     INPUT_PATH = Path('/kaggle/input')
     OUTPUT_PATH = Path('/kaggle/working')
     REPO_PATH = INPUT_PATH / 'deep-learning-course-project'  # UPDATE: your dataset slug
+    # Input paths for Kaggle
+    INPUT_ARTIFACTS_PATH = REPO_PATH / 'artifacts'
+    INPUT_CHECKPOINTS_PATH = INPUT_ARTIFACTS_PATH / 'checkpoints'
+    INPUT_FIGURES_PATH = INPUT_ARTIFACTS_PATH / 'figures'
+    INPUT_STATS_PATH = INPUT_ARTIFACTS_PATH / 'stats'
     
     # Dataset paths - use working directory (writable) for downloads
     DATA_PATH = OUTPUT_PATH / 'data'
@@ -154,6 +159,12 @@ else:
     FIGURES_PATH = ARTIFACTS_PATH / 'figures'          # Saved figures/plots
     OUTPUTS_PATH = ARTIFACTS_PATH / 'outputs'          # Outputs for acceleration (cached tensors, etc.)
     STATS_PATH = ARTIFACTS_PATH / 'stats'              # Training statistics
+
+    # Distinction of input paths are only for Kaggle
+    INPUT_ARTIFACTS_PATH = ARTIFACTS_PATH
+    INPUT_CHECKPOINTS_PATH = CHECKPOINTS_PATH
+    INPUT_FIGURES_PATH = FIGURES_PATH
+    INPUT_STATS_PATH = STATS_PATH
     
     # SRC structure (following guidelines)
     SRC_PATH = PROJECT_ROOT / 'src'
