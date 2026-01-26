@@ -304,13 +304,20 @@ def train_model_with_milestones(
     
     return stats
 
-def load_weights(model: nn.Module, experiment_name: str, model_name: str, device: torch.device, kaggle_load: bool = True):
+def load_weights(
+    model: nn.Module, 
+    experiment_name: str, 
+    model_name: str, 
+    device: torch.device, 
+    kaggle_load: bool = True,
+    strict: bool = True
+):
     if kaggle_load and IS_KAGGLE:
         base_path = CHECKPOINTS_PATH
     else:
         base_path = INPUT_CHECKPOINTS_PATH
     checkpoint = torch.load(base_path /f"{experiment_name}_{model_name}.pth", map_location=device)
-    model.load_state_dict(checkpoint['net'])
+    model.load_state_dict(checkpoint['net'], strict=strict)
     # return model
 
 def load_stats(experiment_name: str, model_name: str, kaggle_load: bool = True) -> Dict[str, Any]:
