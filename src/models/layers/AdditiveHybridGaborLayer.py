@@ -4,7 +4,11 @@ import torch.nn.functional as F
 import math
 
 class AdditiveHybridGaborLayer(nn.Module):
-    def __init__(self, in_channels, out_channels, conv_kernel_size=3, gabor_kernel_size=7, ratio=0.5, pad_mode='constant',stride=1, norm_and_activation=False):
+    """
+    A hybrid layer that uses Monogenic Difference-of-Gaussians (DoG) 
+    to create an attention mechanism for subsequent Gabor filtering.
+    """
+    def __init__(self, in_channels, out_channels, conv_kernel_size=3, gabor_kernel_size=7, ratio=1, pad_mode='constant',stride=1, norm_and_activation=False):
         super().__init__()
 
         self.n_param = int(out_channels * ratio)
@@ -13,10 +17,12 @@ class AdditiveHybridGaborLayer(nn.Module):
         self.stride = stride
         self.conv_kernel_size = conv_kernel_size
         self.gabor_kernel_size = gabor_kernel_size
+
+        # The internal Gabor logic will handle double the channels due to the attention concatenation
         self.in_channels = in_channels * 2
         self.norm_and_activation = norm_and_activation
 
-
+        # --- Gabor Parameter Grid (Frequency & Orientation) ---
         n_scales = int(math.ceil(math.sqrt(self.n_param)))
         n_angles = int(math.ceil(self.n_param / n_scales))
         mesh_scales, mesh_angles = torch.meshgrid(
@@ -50,8 +56,12 @@ class AdditiveHybridGaborLayer(nn.Module):
             + (torch.randn(self.n_param, self.in_channels) * 0.05)
         )
 
+        # Standard Conv branch
         self.std_conv = nn.Conv2d(in_channels, self.n_std, conv_kernel_size, padding=conv_kernel_size//2, stride=stride, bias=False)
 
+
+        # --- Difference of Gaussians (DoG) Initialization ---
+        # Used for blob detection and edge enhancement
         min_sigma = 1.0
         max_sigma = 5.0
         
@@ -64,14 +74,9 @@ class AdditiveHybridGaborLayer(nn.Module):
         log_sigma1 = torch.log(sigma1_init - 0.05)
         log_sigma2 = torch.log(sigma2_init - 0.05)
         
-        
+        # log-space sigmas for the two Gaussian kernels in DoG
         self.log_dog_sigma1 = nn.Parameter(log_sigma1.view(in_channels, 1, 1, 1))
         self.log_dog_sigma2 = nn.Parameter(log_sigma2.view(in_channels, 1, 1, 1))
-
-        with torch.no_grad():
-            self.std_conv.weight *= 1
-            if self.std_conv.bias is not None:
-                self.std_conv.bias.zero_()
 
         if norm_and_activation:
             self.bn_std = nn.BatchNorm2d(out_channels)
@@ -80,6 +85,7 @@ class AdditiveHybridGaborLayer(nn.Module):
 
 
     def generate_filters_quadrature(self, max_size):
+        """Synthesizes Gabor kernels (Standard Real/Imaginary pair)."""
         K = min(self.gabor_kernel_size, max_size)
         self.actual_kernel_size = K
         r = K // 2
@@ -114,6 +120,12 @@ class AdditiveHybridGaborLayer(nn.Module):
         return real_filter, imag_filter
 
     def generate_monogenic_dog_filters(self, max_size):
+        """
+        Synthesizes Monogenic DoG filters. 
+        Returns:
+        1. Real: The DoG (bandpass filter)
+        2. Imag X/Y: The Riesz Transform of the DoG (gradient-like)
+        """
         K = min(self.gabor_kernel_size, max_size)
         self.actual_kernel_size = K
         r = K // 2
@@ -130,15 +142,18 @@ class AdditiveHybridGaborLayer(nn.Module):
         s1 = torch.exp(self.log_dog_sigma1) + 0.05
         s2 = torch.exp(self.log_dog_sigma2) + 0.05
 
-
         norm1 = 1.0 / (2 * torch.pi * s1**2)
         norm2 = 1.0 / (2 * torch.pi * s2**2)
         
+        # Standard Gaussian kernels
         g1_base = torch.exp(-r2 / (2 * s1**2)) * norm1
         g2_base = torch.exp(-r2 / (2 * s2**2)) * norm2
 
+        # Real part is the Difference of Gaussians (Isotropic bandpass)
         real_filter = g1_base - g2_base
 
+        # Imaginary parts are the spatial derivatives (Riesz transform)
+        # These help determine the local phase and orientation
         g1_x = (-x / (s1**2)) * g1_base
         g1_y = (-y / (s1**2)) * g1_base
         
@@ -155,36 +170,49 @@ class AdditiveHybridGaborLayer(nn.Module):
         return real_filter, imag_filter_x, imag_filter_y
 
     def forward(self, x):
+        # 1. Standard convolution path
         out_std = self.std_conv(x)
+
+        # stage 1: Monogenic Signal Analysis
+        # Extract local energy regardless of orientation using DoG
         f_real, f_imag_x, f_imag_y = self.generate_monogenic_dog_filters(x.size(3)-1)
         
         pad_amount = self.actual_kernel_size // 2
         x_padded = F.pad(x, (pad_amount, pad_amount, pad_amount, pad_amount), mode=self.pad_mode)
 
+        # Grouped convolution: each input channel gets its own learnable DoG filter
         out_real = F.conv2d(x_padded, f_real, stride=self.stride, padding=0, groups=self.in_channels//2)
         out_x    = F.conv2d(x_padded, f_imag_x, stride=self.stride, padding=0, groups=self.in_channels//2)
         out_y    = F.conv2d(x_padded, f_imag_y, stride=self.stride, padding=0, groups=self.in_channels//2)
 
+        # Local Energy of the monogenic signal
         out_imag_mag = torch.sqrt(out_x**2 + out_y**2 + 1e-8)
         out_monogenic = torch.sqrt(out_real**2 + out_imag_mag**2 + 1e-8)
 
         out_dog_final = F.avg_pool2d(out_monogenic, kernel_size=3, stride=1, padding=1)
 
+        # stage 2: Attention Masking
+        # sigmoid maps energy to [0, 1]. High energy areas (edges/blobs) get highlighted.
         attn_mask = torch.sigmoid(out_dog_final)
+        # Concatenate original input with its 'attended' version
         x = torch.cat([x, x * attn_mask], dim=1)
         
+        # stage 3: Oriented Gabor Filtering
         f_real, f_imag = self.generate_filters_quadrature(x.size(3)-1)
         pad_amount = self.actual_kernel_size // 2
         x_padded = F.pad(x, (pad_amount, pad_amount, pad_amount, pad_amount), mode=self.pad_mode)
         
         out_real = F.conv2d(x_padded, f_real, stride=self.stride, padding=0)
         out_imag = F.conv2d(x_padded, f_imag, stride=self.stride, padding=0)
+
+        # Final Gabor magnitude
         out_param = torch.sqrt(out_real**2 + out_imag**2 + 1e-8)
         out_param = F.avg_pool2d(out_param, kernel_size=3, stride=1, padding=1)
 
         if self.norm_and_activation:
             out_param = self.bn_param(out_param)
             out_std = self.bn_std(out_std)
+            # Max-pooling across the two representations (standard vs gabor)
             return torch.max(out_std, out_param)
         
         return out_std, out_param
