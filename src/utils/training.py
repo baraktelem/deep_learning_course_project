@@ -312,15 +312,48 @@ def load_weights(
     kaggle_load: bool = True,
     strict: bool = True
 ):
+    """
+    Load model weights from a checkpoint file.
+    
+    Args:
+        model: The model to load weights into (modified in-place).
+        experiment_name: Name of the experiment (used in filename).
+        model_name: Name of the model (used in filename).
+        device: Device to load the weights onto.
+        kaggle_load: If True and running on Kaggle, loads from CHECKPOINTS_PATH (writable /kaggle/working/).
+                     If False or not on Kaggle, loads from INPUT_CHECKPOINTS_PATH (read-only input dataset).
+                     Use kaggle_load=True to load checkpoints saved during current Kaggle session.
+                     Use kaggle_load=False to load checkpoints from the uploaded dataset.
+        strict: If True, requires exact match between model and checkpoint keys.
+                If False, ignores missing/unexpected keys (use with caution).
+    
+    Checkpoint filename format: {experiment_name}_{model_name}.pth
+    """
     if kaggle_load and IS_KAGGLE:
         base_path = CHECKPOINTS_PATH
     else:
         base_path = INPUT_CHECKPOINTS_PATH
     checkpoint = torch.load(base_path /f"{experiment_name}_{model_name}.pth", map_location=device)
     model.load_state_dict(checkpoint['net'], strict=strict)
-    # return model
+
 
 def load_stats(experiment_name: str, model_name: str, kaggle_load: bool = True) -> Dict[str, Any]:
+    """
+    Load training statistics from a pickle file.
+    
+    Args:
+        experiment_name: Name of the experiment (used in filename).
+        model_name: Name of the model (used in filename).
+        kaggle_load: If True and running on Kaggle, loads from STATS_PATH (writable /kaggle/working/).
+                     If False or not on Kaggle, loads from INPUT_STATS_PATH (read-only input dataset).
+                     Use kaggle_load=True to load stats saved during current Kaggle session.
+                     Use kaggle_load=False to load stats from the uploaded dataset.
+    
+    Returns:
+        Dict containing training statistics (loss, val_accuracy, milestones, etc.)
+    
+    Stats filename format: {experiment_name}_{model_name}.pkl
+    """
     if kaggle_load and IS_KAGGLE:
         base_path = STATS_PATH
     else:
